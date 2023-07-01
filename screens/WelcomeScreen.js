@@ -1,62 +1,59 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-import { useState, useEffect } from "react";
+import { useState, useEffect } from 'react';
 
-import { useSelector, useDispatch } from "react-redux";
-import { timeOutHandler } from "../store/authSlice";
+import { useSelector, useDispatch } from 'react-redux';
+import { logout } from '../store/authSlice';
+import { setError } from '../store/errorSlice';
+import { renewTokenAsync } from '../store/renewTokenAsync';
 
-import { StyleSheet, Text, View, ActivityIndicator } from "react-native";
+import { StyleSheet, Text, View, ActivityIndicator } from 'react-native';
 
-import Button from "../components/ui/Button";
+import ErrorScreen from '../components/ui/ErrorScreen';
 
-import getSecretMessage from "../util/requestToFirebase";
+import Button from '../components/ui/Button';
 
-import { Colors } from "../constants/styles";
+import getSecretMessage from '../util/requestToFirebase';
+
+import { Colors } from '../constants/styles';
 
 function WelcomeScreen() {
-  
   const dispatch = useDispatch();
 
   useEffect(() => {
-    // dispatch(timeOutHandler());
-
     const getExpireTime = async () => {
-      const data = await AsyncStorage.getItem('expireTime')
-      console.log(data, 'inside')
-      return data
-    }
+      const expireTimeInMilSecondsString = await AsyncStorage.getItem(
+        'expireTime'
+      );
 
-    console.log(getExpireTime())
+      if (expireTimeInMilSecondsString) {
+        const timeNowInMiliseconds = new Date().getTime();
+        const expireTimeInMilSeconds = Number(expireTimeInMilSecondsString);
 
+        if (timeNowInMiliseconds >= expireTimeInMilSeconds) {
+          dispatch(renewTokenAsync());
+        } else {
+          const newMilisecondsToExpire =
+            expireTimeInMilSeconds - timeNowInMiliseconds;
+          setTimeout(() => {
+            dispatch(renewTokenAsync());
+          }, newMilisecondsToExpire);
+        }
+      } else {
+        const timeWhenTokenExpiresMiliseconds = new Date(
+          new Date().getTime() + 57 * 60 * 1000
+        )
+          .getTime()
+          .toString();
 
-    // setTimeout(() => {
-    //   state.needsNewToken = true;
+        AsyncStorage.setItem('expireTime', timeWhenTokenExpiresMiliseconds);
+      }
+    };
 
-    //   // AsyncStorage.removeItem("expireTime");
-
-    //   console.log("removed");
-
-    //   // AsyncStorage.removeItem("token");
-
-    //   //   }, payload);
-    // }, 3000);
-
-
+    getExpireTime();
   }, []);
 
-  const needsNewToken = useSelector((state) => state.authSlice.needsNewToken);
-
-  // console.log(needsNewToken);
-
-
-
-
-
-
-
-
-
-
+  const errorMessage = useSelector((state) => state.errorSlice.errorMessage);
 
   const [secretMessage, setSecretMessage] = useState(null);
 
@@ -66,10 +63,25 @@ function WelcomeScreen() {
 
   const buttonHandler = async () => {
     setLoading(true);
-    const secret = await getSecretMessage(token);
-    setSecretMessage(secret);
+    try {
+      const secret = await getSecretMessage(token);
+      setSecretMessage(secret);
+    } catch (e) {
+      if (e.response.data.error.message === 'TOKEN_EXPIRED') {
+        dispatch(renewTokenAsync());
+        dispatch(setError('Please, try again'));
+      } else {
+        dispatch(setError('Long time no see! Please, log in again:)'));
+        dispatch(logout());
+      }
+    }
+
     setLoading(false);
   };
+
+  if (errorMessage) {
+    return <ErrorScreen errorText={errorMessage} />;
+  }
 
   return (
     <View style={styles.rootContainer}>
@@ -81,7 +93,7 @@ function WelcomeScreen() {
             Get secret message from Firebase
           </Button>
         )}
-        {loading && <ActivityIndicator size={"small"} color="white" />}
+        {loading && <ActivityIndicator size={'small'} color="white" />}
         {secretMessage && <Text style={styles.text}>{secretMessage}</Text>}
       </View>
     </View>
@@ -93,13 +105,13 @@ export default WelcomeScreen;
 const styles = StyleSheet.create({
   rootContainer: {
     flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
+    justifyContent: 'center',
+    alignItems: 'center',
     padding: 32,
   },
   title: {
     fontSize: 20,
-    fontWeight: "bold",
+    fontWeight: 'bold',
     marginBottom: 8,
   },
   conditionalContainer: {

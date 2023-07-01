@@ -1,5 +1,5 @@
 export const Colors = {
-  primary100: '#f9beda',
+  primary100: '#fcdeed',
   primary500: '#c30b64',
   primary800: '#610440',
   error100: '#fcdcbf',

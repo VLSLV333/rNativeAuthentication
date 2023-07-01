@@ -1,6 +1,6 @@
-import axios from "axios";
+import axios from 'axios';
 
-const API_KEY = "AIzaSyAIr0uwfolFGKg5ea0BQmoWsMzCa9DO3Wg";
+export const API_KEY = 'AIzaSyAIr0uwfolFGKg5ea0BQmoWsMzCa9DO3Wg';
 
 export async function authenticationHandler(mode, email, password) {
   const response = await axios.post(
@@ -13,14 +13,15 @@ export async function authenticationHandler(mode, email, password) {
   );
 
   const authId = response.data.idToken;
+  const refreshToken = response.data.refreshToken;
 
-  return authId;
+  return { authId, refreshToken };
 }
 
 export function createUser(email, password) {
-  return authenticationHandler("signUp", email, password);
+  return authenticationHandler('signUp', email, password);
 }
 
 export function loginUser(email, password) {
-  return authenticationHandler("signInWithPassword", email, password);
+  return authenticationHandler('signInWithPassword', email, password);
 }

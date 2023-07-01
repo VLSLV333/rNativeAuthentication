@@ -97,7 +97,7 @@ function Root() {
     const checkLocalToken = async () => {
       const token = await AsyncStorage.getItem("token");
       if (token) {
-        dispatch(authenticate(token));
+        dispatch(authenticate({token}));
       }
     };
 
